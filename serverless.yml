@@ -1,0 +1,94 @@
+service: swapi
+
+frameworkVersion: '3'
+
+plugins:
+  - serverless-offline
+  - serverless-auto-swagger
+
+custom:
+  autoSwagger:
+    documentation:
+      info:
+        title: Swapiclear
+        version: 1.0.0
+      basePath: /dev
+      schemes:
+        - https
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  stage: dev
+  region: us-east-1
+  apiGateway:
+    shouldStartNameWithService: true
+  environment:
+    TABLA_PERSONAS: ${self:service}-${opt:stage, self:provider.stage}
+    TABLA_PELICULAS: ${self:service}-${opt:stage, self:provider.stage}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+          Resource: "*"
+resources:
+  Resources:
+    PeliculasDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: "id"
+            AttributeType: "S"   
+        KeySchema:
+          -
+            AttributeName: "id"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: "NEW_AND_OLD_IMAGES"
+        TableName: ${self:provider.environment.TABLA_PELICULAS}
+
+functions:
+  index:
+    handler: api/api.detail
+    events:
+      - http: 
+          path: api
+          method: get
+
+  films_index:
+    handler: api/films.index
+    events:
+      - http: 
+          path: api/films
+          method: get
+
+  films_post:
+    handler: api/films.submit
+    events:
+      - http: 
+          path: api/films/submit
+          method: post
+
+  films_id:
+    handler: api/films.id
+    events:
+      - http: 
+          path: api/films/{id}
+          method: get  
+
+  films_schema:
+    handler: api/films.schema
+    events:
+      - http: 
+          path: api/films/schema
+          method: get
